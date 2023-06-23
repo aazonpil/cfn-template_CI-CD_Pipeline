@@ -38,7 +38,7 @@ Resources:
   InternetGatewayAttachment:
     Type: 'AWS::EC2::VPCGatewayAttachment'
     Properties:
-      VpcId: !Ref cloudVPC
+      VpcId: !Ref 'cloudVPC'
       InternetGatewayId: !Ref InternetGateway
 
   # Create Public Subnet1a
