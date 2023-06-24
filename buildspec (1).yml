@@ -23,11 +23,11 @@ phases:
       - echo ===== TESTING OUR CLOUDFORMATION TEMPLATE =====
       - cfn-lint vpc-network-template.yml
       - echo WE ARE RUNNING OUR CFN TEMPLATE
-      - aws cloudformation package --template-file vpc-network-template.yml --s3-bucket fabmu2023 --output-template-file outputTemplate.yml
+      - aws cloudformation package --template-file vpc-webtier.yaml --s3-bucket mycicdpipleine --output-template-file outputTemplate.yml
   post_build:
     commands:
       - echo **** Build was completed at `date` ****
 artifacts:
   files: # use this command to select all files in the repository "**/*"
-    - vpc-network-template.yml
+    - vpc-webtier.yaml
     - outputTemplate.yml
