@@ -1,12 +1,11 @@
 ---
 AWSTemplateFormatVersion: 2010-09-09
 Description: |-
-  VPC, Route Table, Internet Gateway, Attaches Internet Gateway to the VPC you just created,
-  2 Public Subnets, Scaling Policy for Public Subnets, Route Table for Public Subnets,
-  Associate the Public Subnets to the Route Table, Security group with HTTP & SSH to open to 0.0.0.0/0,
-  Launch Template with Bootstrap script to install & launch Apache, AutoScaling Group for Public Subnets,
-  Scaling Policy, 4 Private Subnets — two in us-east1a & two in us-east1b,
-  AutoScaling Group for two Private Subnets in the Application tier
+  AWS CloudFormation 3-tier architecture Sample, VPC, Route Table, Internet Gateway,
+  Attaches Internet Gateway to the VPC you just created, 2 Public Subnets, Scaling Policy for Public Subnets, 
+  Route Table for Public Subnets, Associate the Public Subnets to the Route Table, Security group with HTTP & SSH to open to 0.0.0.0/0, 
+  Launch Template with Bootstrap script to install & launch Apache, AutoScaling Group for Public Subnets, Scaling Policy, 
+  4 Private Subnets — two in us-east1a & two in us-east1b, AutoScaling Group for two Private Subnets in the Application tier
 
 Resources:
   # Creating the VPC
@@ -18,18 +17,18 @@ Resources:
       EnableDnsHostnames: true
       Tags:
         - Key: Name
-          Value: !Join
-            - ''
-            - - !Ref 'AWS::StackName'
-              - '-cloudVPC'
+          Value: !Join ['', [!Ref 'AWS::StackName', '-VPC']]
 
   # Route Table
   RouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref 'cloudVPC'
+      Tags:
+        - Key: Name
+          Value: !Join ['', [!Ref 'AWS::StackName', '-rtble']]
 
-   # Creating an internetGateway
+  # Creating an internetGateway
   InternetGateway:
     Type: 'AWS::EC2::InternetGateway'
     DependsOn: cloudVPC
@@ -38,10 +37,10 @@ Resources:
   InternetGatewayAttachment:
     Type: 'AWS::EC2::VPCGatewayAttachment'
     Properties:
-      VpcId: !Ref 'cloudVPC'
+      VpcId: !Ref cloudVPC
       InternetGatewayId: !Ref InternetGateway
 
-  # Create Public Subnet1a
+  # Create Public Subnet 1a
   PublicSubnet1a:
     Type: AWS::EC2::Subnet
     Properties:
@@ -49,8 +48,11 @@ Resources:
       AvailabilityZone: !Select [0, !GetAZs '']
       CidrBlock: 10.0.0.0/20
       MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Join ['', [!Ref 'AWS::StackName', '-pub_sub_1a']]
 
-  # Create Public Subnet1b
+  # Create Public Subnet 1b
   PublicSubnet1b:
     Type: AWS::EC2::Subnet
     Properties:
@@ -58,6 +60,9 @@ Resources:
       AvailabilityZone: !Select [1, !GetAZs '']
       CidrBlock: 10.0.16.0/20
       MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Join ['', [!Ref 'AWS::StackName', '-pub_sub_1b']]
 
   # Create Route Table
   PublicRouteTable:
@@ -73,15 +78,15 @@ Resources:
       DestinationCidrBlock: 0.0.0.0/0
       GatewayId: !Ref InternetGateway
 
-  # Associate Public Subnet1a
-  PublicSubnet1aRouteTableAssociation:
+  # Associate Public Subnet 1a
+  PublicSubnet1RouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       RouteTableId: !Ref PublicRouteTable
       SubnetId: !Ref PublicSubnet1a
 
-  # Associate Public Subnet1b
-  PublicSubnet1bRouteTableAssociation:
+  # Associate Public Subnet 1b
+  PublicSubnet2RouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       RouteTableId: !Ref PublicRouteTable
@@ -92,23 +97,26 @@ Resources:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
       GroupName: SecurityGroup-07
-      GroupDescription: Open HTTP (port 80) and SSH (port 22)
+      GroupDescription: Open HTTP (port 80), HTTPS (port 443), SSH (port 22)
       VpcId: !Ref 'cloudVPC'
+      Tags:
+        - Key: Name
+          Value: !Join ['', [!Ref 'AWS::StackName', '-sg']]
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 80
           ToPort: 80
           CidrIp: 0.0.0.0/0
         - IpProtocol: tcp
-          FromPort: 22
-          ToPort: 22
-          CidrIp: 0.0.0.0/0
-        - IpProtocol: tcp
           FromPort: 443
           ToPort: 443
           CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
 
-  # Create Launch Template
+    # Create Launch Template
   LaunchTemplate:
     Type: 'AWS::EC2::LaunchTemplate'
     Properties:
@@ -124,7 +132,6 @@ Resources:
         InstanceType: t2.micro
         UserData:
           Fn::Base64: |
-          
             #!/bin/bash
             yum update -y
             yum install httpd -y
@@ -159,7 +166,7 @@ Resources:
       AutoScalingGroupName: !Ref AutoScalingGroup
       ScalingAdjustment: '1'
 
-  # Create Private Subnet1a
+  # Create Private Subnet 1a
   PrivateSubnet1a:
     Type: AWS::EC2::Subnet
     Properties:
@@ -168,7 +175,7 @@ Resources:
       CidrBlock: 10.0.32.0/20
       MapPublicIpOnLaunch: false
 
-  # Create Private Subnet1b
+  # Create Private Subnet 1b
   PrivateSubnet1b:
     Type: AWS::EC2::Subnet
     Properties:
@@ -177,16 +184,16 @@ Resources:
       CidrBlock: 10.0.48.0/20
       MapPublicIpOnLaunch: false
 
-  # Create Private Subnetdb1a 
+  # Create Private Subnet db 1a
   PrivateSubnetdb1a:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref 'cloudVPC'
-       AvailabilityZone: !Select [0, !GetAZs '']
+      AvailabilityZone: !Select [0, !GetAZs '']
       CidrBlock: 10.0.64.0/20
       MapPublicIpOnLaunch: false
 
-  # Create Private Subnetdb1b
+  # Create Private Subnet db 1b
   PrivateSubnetdb1b:
     Type: AWS::EC2::Subnet
     Properties:
@@ -209,15 +216,15 @@ Resources:
       DestinationCidrBlock: 0.0.0.0/0
       GatewayId: !Ref InternetGateway
 
-  # Associate Private Subnet1a
+  # Associate Private Subnet 1a
   PrivateSubnet1aRouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       RouteTableId: !Ref PrivateRouteTable1b
       SubnetId: !Ref PrivateSubnet1a
 
-  # Associate Private Subnet1b
-  PrivateSubnet1bRouteTableAssociation:
+  # Associate Private Subnet 1b
+  PrivateSubnet2RouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       RouteTableId: !Ref PrivateRouteTable1b
@@ -229,7 +236,18 @@ Resources:
     Properties:
       LaunchTemplate:
         LaunchTemplateId: !Ref LaunchTemplate
-git 
+        Version: !GetAtt LaunchTemplate.LatestVersionNumber
+      MaxSize: '5'
+      MinSize: '2'
+      DesiredCapacity: '2'
+      VPCZoneIdentifier:
+        - !Ref PrivateSubnet1a
+        - !Ref PrivateSubnet1b
+      MetricsCollection:
+        - Granularity: 1Minute
+
+  # Create a Scaling Policy
+  ScalingPolicy02:
     Type: 'AWS::AutoScaling::ScalingPolicy'
     Properties:
       AdjustmentType: ChangeInCapacity
@@ -241,12 +259,20 @@ git
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
       GroupName: SecurityGroup-08
-      GroupDescription: Open HTTP (port 80) and SSH (port 22)
+      GroupDescription: Open HTTP (port 80), HTTPS (port 443), SSH (port 22)
       VpcId: !Ref 'cloudVPC'
+      Tags:
+        - Key: Name
+          Value: !Join ['', [!Ref 'AWS::StackName', '-sg']]
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 80
           ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          
           CidrIp: 0.0.0.0/0
         - IpProtocol: tcp
           FromPort: 22
